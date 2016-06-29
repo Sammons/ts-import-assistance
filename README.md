@@ -1,3 +1,12 @@
+# 0.0.3
+
+* instead of importing `../node_modules/.../module_name/file`, import `module_name/file`
+* stop caring if the file is dirty
+
+# 0.0.2
+
+packaging updates
+
 # 0.0.1 Snapshot release
 
 TypeScript assistance with writing imports.

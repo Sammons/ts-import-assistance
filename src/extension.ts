@@ -25,27 +25,17 @@ export function activate(context: vscode.ExtensionContext) {
         var addToImports = (symbol, filePath) => {
             let performEdit = () => {
                 return vscode.window.activeTextEditor.edit((editbuilder) => {
-                    var resolvedPosixPath = path.normalize(filePath).replace(/\\/gm,'/');
+                    var resolvedPosixPath = path.normalize(filePath).replace(/\\/gm, '/');
                     var cleanPath = resolvedPosixPath.replace(/(\.js)|(\.d.ts)|(\.ts)$/gm, '');
                     if (cleanPath != filePath && filePath[0] != '.') {
                         cleanPath = './' + cleanPath;
                     }
+                    cleanPath = cleanPath.split('node_modules/').pop();
                     editbuilder.insert(new vscode.Position(0, 0), `import {${symbol}} from '${cleanPath}';\n`);
                 });
-            }
-            if (vscode.window.activeTextEditor.document.isDirty) {
-                return vscode.window.showQuickPick(['Yes', 'No'], { placeHolder: 'You have pending changes, save? (No will cancel operation).' }).then(res => {
-                    if (res === 'Yes') {
-                        return performEdit();
-                    } else {
-                        vscode.window.showInformationMessage(`Cancelled import.`);
-                        return;
-                    }
-                });
-            } else {
-                return performEdit();
-            }
-        }
+            };
+            return performEdit();
+        };
 
         console.log('imports', imports);
         if (selection.isEmpty) {
@@ -63,11 +53,14 @@ export function activate(context: vscode.ExtensionContext) {
         console.log('cur symbol text', selectionText)
         Promise.resolve(vscode.commands.executeCommand('vscode.executeWorkspaceSymbolProvider', selectionText).then(
             (result: vscode.SymbolInformation[]) => {
-                result = result.filter(r => r.location.uri.fsPath !== activeFile && r.name === selectionText);
+                result = result.filter(
+                    r => r.location.uri.fsPath !== activeFile
+                        && r.name === selectionText
+                        && r.kind !== vscode.SymbolKind.Property);
                 if (result.length === 0) {
                     vscode.window.showInformationMessage(`Unable to locate symbol ${selectionText}`);
                 } else if (result.length > 1) {
-                    console.log('possibilities', result)
+                    console.log('possibilities', result);
                     var paths = {};
                     result.map(r => r.location.uri.fsPath).forEach(p => paths[p] = true);
                     var options = Object.keys(paths);
@@ -93,7 +86,7 @@ export function activate(context: vscode.ExtensionContext) {
                 }
             })).catch(e => {
                 vscode.window.showErrorMessage(`Encountered an error, sorry. Message: ${e.message}.`);
-            })
+            });
     });
 
     context.subscriptions.push(disposable);

@@ -2,7 +2,7 @@
     "name": "ts-import-assistance",
     "displayName": "TypeScript Import Assistance",
     "description": "Auto import symbols on command.",
-    "version": "0.0.2",
+    "version": "0.0.3",
     "publisher": "Sammons",
     "author": {
         "email": "ben@sammons.io"
