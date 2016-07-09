@@ -56,6 +56,9 @@ class TSImportAssistance {
             resolvedPosixPath = path.relative(this.activeDir, resolvedPosixPath);
             cleanPath = resolvedPosixPath.replace(/(\.js)|(\.d.ts)|(\.ts)|(\.tsx)$/gm, '');
         }
+        // make sure no backslashes make it through
+        cleanPath = cleanPath.replace(/\\/gm, '/');
+        
         if (cleanPath != pathStr && pathStr[0] != '.') {
             cleanPath = './' + cleanPath;
         }
@@ -71,8 +74,7 @@ class TSImportAssistance {
             // typings/main/definitions/whatever/index.d.ts
             cleanPath = cleanPath.split('definitions/').pop().split('/')[0];
         }
-        // make sure no backslashes make it through
-        cleanPath = cleanPath.replace(/\\/gm, '/');
+        
         return cleanPath;
     }
 
