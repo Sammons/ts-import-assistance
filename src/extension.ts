@@ -3,7 +3,6 @@
 // for typescript, simple solution for auto importing on demand.
 import * as vscode from 'vscode';
 import * as path from 'path';
-import * as os from 'os';
 
 const nodeLibs =
     ['path', 'events', 'child_process', 'fs', 'os', 'net', 'crypto',
@@ -53,11 +52,15 @@ class TSImportAssistance {
         let cleanPath = pathStr;
         if (!nodeLibs.find(s => s === pathStr)) {
             let resolvedPosixPath = path.normalize(pathStr).replace(/\\/gm, '/');
+            // apparently this can re-introduce backslashes
             resolvedPosixPath = path.relative(this.activeDir, resolvedPosixPath);
-            cleanPath = resolvedPosixPath.replace(/(\.js)|(\.d.ts)|(\.ts)$/gm, '');
+            cleanPath = resolvedPosixPath.replace(/(\.js)|(\.d.ts)|(\.ts)|(\.tsx)$/gm, '');
         }
         if (cleanPath != pathStr && pathStr[0] != '.') {
             cleanPath = './' + cleanPath;
+        }
+        if (cleanPath.substr(0, './../'.length) === './../') {
+            cleanPath = cleanPath.substr('./'.length);
         }
         if (cleanPath.includes('node_modules')) {
             cleanPath = cleanPath.split('node_modules/').pop();
@@ -68,6 +71,8 @@ class TSImportAssistance {
             // typings/main/definitions/whatever/index.d.ts
             cleanPath = cleanPath.split('definitions/').pop().split('/')[0];
         }
+        // make sure no backslashes make it through
+        cleanPath = cleanPath.replace(/\\/gm, '/');
         return cleanPath;
     }
 
