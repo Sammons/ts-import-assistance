@@ -18,7 +18,7 @@ class TSImportAssistance {
     activeFile = vscode.window.activeTextEditor.document.fileName;
     activeDir = path.parse(this.activeFile).dir;
     insertPosition = new vscode.Position(0, 0);
-
+    get splitByTokens() { return /[\s\{\}\(\)\`\'\"\[\]\;\*\-\%\@\~\/\<\>\.\=]/gm; }
     nextPossiblyValidLine(line: number): { nextPossibleLine: number, valid: boolean } {
         let lineContent100 = this.getTextFromDocument(line, 0, 100);
         let lineIncludesTripleSlashRef = () => lineContent100.includes('///') && lineContent100.includes('reference');
@@ -114,13 +114,13 @@ class TSImportAssistance {
 
     getSymbolsFromNonEmptySelections(): string[] {
         if (vscode.window.activeTextEditor.selections.length > 0) {
-            let splitByTokens = /[\s\{\}\(\)\`\'\"\[\]\;\*\-\%\@\~\/\<\>\.]/gm;
+            
             // get all selections
             return vscode.window.activeTextEditor.selections.filter(s => !s.isEmpty).map(s => {
                 // get their text
                 return vscode.window.activeTextEditor.document.getText(new vscode.Range(s.start, s.end));
                 // split them and take their last token
-            }).map(s => s.split(splitByTokens).shift());
+            }).map(s => s.split(this.splitByTokens).shift());
         }
     }
 
@@ -170,14 +170,14 @@ class TSImportAssistance {
                 startCharPos--;
                 currentPrevChar = getPrevChar(line, startCharPos);
             }
-            console.log('terminating search at', startCharPos, endCharPos, this.getTextFromDocument(line, startCharPos, endCharPos));
+            // console.log('terminating search at', startCharPos, endCharPos, this.getTextFromDocument(line, startCharPos, endCharPos));
             return this.getTextFromDocument(line, startCharPos, endCharPos).trim();
         };
         // guess each symbol, then take the first simple symbol from that selection
         let results = vscode.window.activeTextEditor.selections
             .filter(s => s.isEmpty === true)
             .map(s => findCurrentToken(s))
-            .map(s => s.trim().split(/[\s\{\}\(\)\`\'\"\[\]\;\*\-\%\@\~\/\<\>\.]/gm).shift());
+            .map(s => s.trim().split(this.splitByTokens).shift());
         return results;
     }
 
@@ -215,12 +215,12 @@ class TSImportAssistance {
     }
 
     pickSymbolToUseInImport(symbolInfos: vscode.SymbolInformation[], desiredSymbolStr: string): PromiseLike<ImportDetails> {
-        console.log('possibilities', symbolInfos);
+        // console.log('possibilities', symbolInfos);
         let paths = this.getSetOfCleanFsPathsFromSymbolInfos(symbolInfos);
         return vscode.window.showQuickPick(paths, {
             placeHolder: 'Choose which location you intended to import from.'
         }).then(userPick => {
-            console.log('picked', userPick);
+            // console.log('picked', userPick);
             if (!userPick) {
                 return null;
             }
@@ -232,12 +232,12 @@ class TSImportAssistance {
 
             if (choicesMatchingNodeLibs.length > 0) {
                 let choice = choicesMatchingNodeLibs[0];
-                console.log('picking node lib', choice.containerName);
+                // console.log('picking node lib', choice.containerName);
                 return { symbolToImport: desiredSymbolStr, path: choice.containerName, symbolInfo: choice };
             } else {
                 // TODO: consider, what if symbolInfosMatchingUserChoice.length > 1 ?
                 let choice = symbolInfosMatchingUserChoice[0];
-                console.log('picking the first selection');
+                // console.log('picking the first selection');
                 return { symbolToImport: desiredSymbolStr, path: choice.location.uri.fsPath, symbolInfo: choice };
             }
         });
@@ -290,7 +290,7 @@ export function deactivate() {
 }
 
 export function activate(context: vscode.ExtensionContext) {
-    console.log('activated');
+    // console.log('activated');
     context.subscriptions.push(
         vscode.commands.registerCommand(tsImportAssistanceCommandName, () => {
             new TSImportAssistance().activate(context);
