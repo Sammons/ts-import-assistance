@@ -15,8 +15,9 @@ This will search for symbols matching whatever you have highlighted, and then im
 If nothing is highlighted, it makes a best guess using text around the cursor.
 
 This tool isn't very smart; it will blindly attempt to import things even if they exist in scope.
-On the flipside the source isn't that big and the heuristics it uses are relatively simple.
+On the flipside the source isn't that big and the heuristics it uses are relatively simple. 
 
+Feel free to open issues or pull requests on Github.
 
 Cheers!
 Source [here](https://github.com/Sammons/ts-import-assistance)
@@ -27,7 +28,9 @@ This software is utterly free and open, and the authors are not responsible for 
 
 * [Symbol names are not found for import unless the cursor is positioned at the end of the name](https://github.com/Sammons/ts-import-assistance/issues/10)
     - Now will backtrack to try to find symbol
+    - This also means that usages like `new ClassName().wat| <- cursor at the pipe` might work (assuming no params)
 * [Imports incorrectly are added above /// <reference ... /> lines instead of below](https://github.com/Sammons/ts-import-assistance/issues/9)
+    - This should work even if there are comments above the triple slashe ref
 * Also run for all cursor locations; multiple cursor support.
 
 # 0.0.5
