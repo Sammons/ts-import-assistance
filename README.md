@@ -12,15 +12,23 @@ The extension command is `extension.resolveMissingImportsForHighlighted`, if you
 
 This will search for symbols matching whatever you have highlighted, and then import them into the current file.
 
-If nothing is highlighted, it makes a best guess using text before the cursor.
+If nothing is highlighted, it makes a best guess using text around the cursor.
 
-This tool isn't very smart right now, it will blindly attempt to import things even if they exist in scope.
+This tool isn't very smart; it will blindly attempt to import things even if they exist in scope.
+On the flipside the source isn't that big and the heuristics it uses are relatively simple.
 
 
 Cheers!
 Source [here](https://github.com/Sammons/ts-import-assistance)
 
 This software is utterly free and open, and the authors are not responsible for any consequences of its existence (MIT license).
+
+# 0.0.6
+
+* [Symbol names are not found for import unless the cursor is positioned at the end of the name](https://github.com/Sammons/ts-import-assistance/issues/10)
+    - Now will backtrack to try to find symbol
+* [Imports incorrectly are added above /// <reference ... /> lines instead of below](https://github.com/Sammons/ts-import-assistance/issues/9)
+* Also run for all cursor locations; multiple cursor support.
 
 # 0.0.5
 

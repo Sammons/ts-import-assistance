@@ -1,4 +1,5 @@
 'use strict';
+import * as os from 'os';
 
 // for typescript, simple solution for auto importing on demand.
 import * as vscode from 'vscode';
@@ -17,35 +18,46 @@ class TSImportAssistance {
     activeFile = vscode.window.activeTextEditor.document.fileName;
     activeDir = path.parse(this.activeFile).dir;
     insertPosition = new vscode.Position(0, 0);
-    _textBeforeOrInCursor: string = null;
-    _textFragmentsInSelectionOrBeforeCursor: string[] = null;
 
-    moveImportInsertsToSecondLineIfUseStrictEnabled(): void {
-        let selection = vscode.window.activeTextEditor.selection;
-
-        if (selection.isEmpty) {
-            let range = new vscode.Range(new vscode.Position(0, 0), selection.start);
-            this._textBeforeOrInCursor = vscode.window.activeTextEditor.document.getText(range);
-        } else {
-            this._textBeforeOrInCursor = vscode.window.activeTextEditor.document.getText(selection);
+    nextPossiblyValidLine(line: number): { nextPossibleLine: number, valid: boolean } {
+        let lineContent100 = this.getTextFromDocument(line, 0, 100);
+        let lineIncludesTripleSlashRef = () => lineContent100.includes('///') && lineContent100.includes('reference');
+        let lineIncludesUseStrict = () => lineContent100.includes('use strict');
+        let wholeDocumentLines = vscode.window.activeTextEditor.document.getText().split(os.EOL);
+        let lineCount = wholeDocumentLines.length;
+        let documentContent = wholeDocumentLines.slice(line).join(os.EOL);
+        if (/reference\ path\s*?\=/gm.test(documentContent)) {
+            let currentLine = lineCount - 1;
+            while (!/reference\ path\s*?\=/gm.test(this.getTextFromDocument(currentLine, 0, 100))) {
+                currentLine--;
+            }
+            if (currentLine + 1 === lineCount) {
+                vscode.window.activeTextEditor.edit((eb) => eb.insert(new vscode.Position(currentLine + 1, 0), os.EOL));
+            }
+            return { nextPossibleLine: currentLine + 1, valid: false };
         }
-        // TODO: super finicky with wierd symbols, but gets the job done for me.
-        this._textFragmentsInSelectionOrBeforeCursor =
-            this._textBeforeOrInCursor.split(/[\s\{\}\(\)\`\'\"\[\]\;\*\-\%\@\~\/\<\>\.]/gm)
-                .filter(s => s.trim() !== '');
-
-        let startOfFile =
-            vscode.window.activeTextEditor.document.getText(new vscode.Range(
-                new vscode.Position(0, 0),
-                new vscode.Position(0, "'use strict'".length)
-            ));
-        if (startOfFile.replace(/\"/g, '\'') === "'use strict'") {
-            this.insertPosition = new vscode.Position(1, 0);
+        if (lineIncludesTripleSlashRef()) {
+            return { nextPossibleLine: line + 1, valid: false };
         }
+        if (lineIncludesUseStrict()) {
+            return { nextPossibleLine: line + 1, valid: false };
+        }
+        return { nextPossibleLine: line, valid: true };
+    }
+
+    setImportInsertLine() {
+        let prospectiveInsertLine = 0;
+
+        let lineIsValidResult = this.nextPossiblyValidLine(prospectiveInsertLine);
+        while (!lineIsValidResult.valid) {
+            prospectiveInsertLine = lineIsValidResult.nextPossibleLine;
+            lineIsValidResult = this.nextPossiblyValidLine(prospectiveInsertLine);
+        }
+        this.insertPosition = new vscode.Position(prospectiveInsertLine, 0);
     }
 
     constructor() {
-        this.moveImportInsertsToSecondLineIfUseStrictEnabled();
+        this.setImportInsertLine();
     }
 
     cleanPathToImportFrom(pathStr: string): string {
@@ -58,7 +70,7 @@ class TSImportAssistance {
         }
         // make sure no backslashes make it through
         cleanPath = cleanPath.replace(/\\/gm, '/');
-        
+
         if (cleanPath != pathStr && pathStr[0] != '.') {
             cleanPath = './' + cleanPath;
         }
@@ -74,7 +86,7 @@ class TSImportAssistance {
             // typings/main/definitions/whatever/index.d.ts
             cleanPath = cleanPath.split('definitions/').pop().split('/')[0];
         }
-        
+
         return cleanPath;
     }
 
@@ -94,30 +106,94 @@ class TSImportAssistance {
         });
     };
 
-    getCurrentImports() {
-        let documentText = vscode.window.activeTextEditor.document.getText().replace(/\r\n/gm, '\n');
-        let importLines = documentText.split(/\n/gm).filter(l => /^import/.test(l.trim()));
-        let imports = importLines.map(i => i.split('from').pop().replace(/[\';\"]*/gm, '').trim());
-        return imports;
-    }
-
     getCoreModuleUsage(str: string) {
         let pieces = str.split('.');
         let coreModule = nodeLibs.find(n => n === pieces[0]);
         return coreModule;
     };
 
-    guessSymbolToImport(): string {
-        // TODO: maybe iterate and reject symbols till we get one that could work? usually doesn't matter
-        let selectionText = this._textFragmentsInSelectionOrBeforeCursor[
-            this._textFragmentsInSelectionOrBeforeCursor.length - 1
-        ];
-        console.log('cur symbol text', selectionText);
-        let modul = this.getCoreModuleUsage(selectionText);
-        if (modul) {
-            return modul;
+    getSymbolsFromNonEmptySelections(): string[] {
+        if (vscode.window.activeTextEditor.selections.length > 0) {
+            let splitByTokens = /[\s\{\}\(\)\`\'\"\[\]\;\*\-\%\@\~\/\<\>\.]/gm;
+            // get all selections
+            return vscode.window.activeTextEditor.selections.filter(s => !s.isEmpty).map(s => {
+                // get their text
+                return vscode.window.activeTextEditor.document.getText(new vscode.Range(s.start, s.end));
+                // split them and take their last token
+            }).map(s => s.split(splitByTokens).shift());
         }
-        return selectionText;
+    }
+
+    // shortcut to get text in range, 0,0,0 would give 0 length str
+    // validates range and returns, should support negative ranges    
+    getTextFromDocument(l: number, c: number, forward: number): string {
+        let doc = vscode.window.activeTextEditor.document;
+        if (forward < 0) {
+            let range = doc.validateRange(
+                new vscode.Range(new vscode.Position(l, c + forward > 0 ? c + forward : 0), new vscode.Position(l, c)));
+            return doc.getText(range);
+        } else {
+            let range = doc.validateRange(
+                new vscode.Range(new vscode.Position(l, c), new vscode.Position(l, c + forward)));
+            return doc.getText(range);
+        }
+    }
+
+    discoverSymbolsWhereSelectionIsEmpty(): string[] {
+        // only works if selection is empty
+        let getNextChar = (l: number, c: number): string => this.getTextFromDocument(l, c, 1);
+        let getPrevChar = (l: number, c: number): string => this.getTextFromDocument(l, c, -1);
+
+        let findCurrentToken = (s: vscode.Selection) => {
+            let line = s.start.line;
+            let startCharPos = s.start.character;
+            let endCharPos = s.start.character;
+            let currentNextChar = getNextChar(line, endCharPos);
+            let currentPrevChar = getPrevChar(line, startCharPos);
+            // stumble backwards into a word
+            while (currentNextChar.length > 0
+                && currentPrevChar.length > 0
+                && currentNextChar.trim() === ''
+                && currentPrevChar.trim() === '') {
+                endCharPos--;
+                startCharPos--;
+                currentNextChar = getNextChar(line, endCharPos);
+                currentPrevChar = getPrevChar(line, startCharPos);
+            }
+            // stumble forwards into end of current word
+            while (currentNextChar.length > 0 && !/\s/.test(currentNextChar)) {
+                endCharPos++;
+                currentNextChar = getNextChar(line, endCharPos);
+            }
+            // stumble backwards into start of current word
+            while (currentPrevChar.length > 0 && !/\s/.test(currentPrevChar)) {
+                startCharPos--;
+                currentPrevChar = getPrevChar(line, startCharPos);
+            }
+            console.log('terminating search at', startCharPos, endCharPos, this.getTextFromDocument(line, startCharPos, endCharPos));
+            return this.getTextFromDocument(line, startCharPos, endCharPos).trim();
+        };
+        // guess each symbol, then take the first simple symbol from that selection
+        let results = vscode.window.activeTextEditor.selections
+            .filter(s => s.isEmpty === true)
+            .map(s => findCurrentToken(s))
+            .map(s => s.trim().split(/[\s\{\}\(\)\`\'\"\[\]\;\*\-\%\@\~\/\<\>\.]/gm).shift());
+        return results;
+    }
+
+    guessSymbolsToImport(): string[] {
+        let keysObj = {};
+        this.discoverSymbolsWhereSelectionIsEmpty()
+            .concat(this.getSymbolsFromNonEmptySelections())
+            .forEach(s => {
+                let modul = this.getCoreModuleUsage(s);
+                if (modul) {
+                    keysObj[modul] = true;
+                } else {
+                    keysObj[s] = true;
+                }
+            });
+        return Object.keys(keysObj).filter(s => s.trim().length > 0);
     }
 
     runBuiltinSymbolSearch(symbolToTryToImport: string): PromiseLike<vscode.SymbolInformation[]> {
@@ -188,19 +264,24 @@ class TSImportAssistance {
                 // or there is only one choice to try
                 return { symbolToImport: symbolToTryToImport, path: symbolInfos[0].location.uri.fsPath, symbolInfo: symbolInfos[0] };
             })).catch(e => {
-                vscode.window.showErrorMessage(`Encountered an error, sorry. Message: ${e.message}.`);
+                vscode.window.showErrorMessage(`Encountered an error looking for symbol${symbolToTryToImport}, sorry. Message: ${e.message}.`);
             });
     }
 
     activate(context: vscode.ExtensionContext) {
-        let symbolToImport = this.guessSymbolToImport();
-        return Promise.resolve(this.searchForSymbolInWorkspace(symbolToImport)).then(importDetails => {
-            if (!importDetails) {
-                vscode.window.showInformationMessage(`Unable to locate symbol ${symbolToImport}`);
-            } else {
-                return this.addToImports(importDetails);
-            }
-        });
+        try {
+            let symbolsToImport = this.guessSymbolsToImport();
+            return Promise.all(symbolsToImport.map(s => Promise.resolve(this.searchForSymbolInWorkspace(s)).then(importDetails => {
+                if (!importDetails) {
+                    vscode.window.showInformationMessage(`Unable to locate symbol ${symbolsToImport[0]}`);
+                } else {
+                    return this.addToImports(importDetails);
+                }
+            })));
+        } catch (e) {
+            console.log(e);
+            return;
+        }    
     }
 }
 
