@@ -24,6 +24,10 @@ Source [here](https://github.com/Sammons/ts-import-assistance)
 
 This software is utterly free and open, and the authors are not responsible for any consequences of its existence (MIT license).
 
+# 0.0.7
+
+* Stop accepting more special characters
+
 # 0.0.6
 
 * [Symbol names are not found for import unless the cursor is positioned at the end of the name](https://github.com/Sammons/ts-import-assistance/issues/10)

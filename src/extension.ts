@@ -18,7 +18,7 @@ class TSImportAssistance {
     activeFile = vscode.window.activeTextEditor.document.fileName;
     activeDir = path.parse(this.activeFile).dir;
     insertPosition = new vscode.Position(0, 0);
-    get splitByTokens() { return /[\s\{\}\(\)\`\'\"\[\]\;\*\-\%\@\~\/\<\>\.\=]/gm; }
+    get splitByTokens() { return /[\s\{\}\(\)\`\'\"\[\]\;\*\-\%\@\~\/\<\>\.\=\,\|\?\!\#\@\^\&\*]/gm; }
     nextPossiblyValidLine(line: number): { nextPossibleLine: number, valid: boolean } {
         let lineContent100 = this.getTextFromDocument(line, 0, 100);
         let lineIncludesTripleSlashRef = () => lineContent100.includes('///') && lineContent100.includes('reference');
