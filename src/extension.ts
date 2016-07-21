@@ -18,7 +18,7 @@ class TSImportAssistance {
     activeFile = vscode.window.activeTextEditor.document.fileName;
     activeDir = path.parse(this.activeFile).dir;
     insertPosition = new vscode.Position(0, 0);
-    get splitByTokens() { return /[\s\{\}\(\)\`\'\"\[\]\;\*\-\%\@\~\/\<\>\.\=\,\|\?\!\#\@\^\&\*]/gm; }
+    get splitByTokens() { return /[\s\{\}\(\)\`\'\"\[\]\;\*\-\%\@\~\/\<\>\.\=\,\|\?\!\#\@\^\&\*\:]/gm; }
     nextPossiblyValidLine(line: number): { nextPossibleLine: number, valid: boolean } {
         let lineContent100 = this.getTextFromDocument(line, 0, 100);
         let lineIncludesTripleSlashRef = () => lineContent100.includes('///') && lineContent100.includes('reference');
@@ -112,6 +112,14 @@ class TSImportAssistance {
         return coreModule;
     };
 
+    getFirstNonEmptyWord(str: string): string {
+        let words = str.split(this.splitByTokens);
+        for (var i = 0; i < words.length; ++i) {
+            if (words[i].trim() !== '') { return words[i]; }
+        }
+        return '';
+    }
+
     getSymbolsFromNonEmptySelections(): string[] {
         if (vscode.window.activeTextEditor.selections.length > 0) {
             
@@ -120,7 +128,7 @@ class TSImportAssistance {
                 // get their text
                 return vscode.window.activeTextEditor.document.getText(new vscode.Range(s.start, s.end));
                 // split them and take their last token
-            }).map(s => s.split(this.splitByTokens).shift());
+            }).map(s => this.getFirstNonEmptyWord(s));
         }
     }
 
@@ -177,7 +185,7 @@ class TSImportAssistance {
         let results = vscode.window.activeTextEditor.selections
             .filter(s => s.isEmpty === true)
             .map(s => findCurrentToken(s))
-            .map(s => s.trim().split(this.splitByTokens).shift());
+            .map(s => this.getFirstNonEmptyWord(s));
         return results;
     }
 
