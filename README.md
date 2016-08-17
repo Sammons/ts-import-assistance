@@ -24,6 +24,10 @@ Source [here](https://github.com/Sammons/ts-import-assistance)
 
 This software is utterly free and open, and the authors are not responsible for any consequences of its existence (MIT license).
 
+# 0.0.9
+
+* Auto detect which type of quote to use
+
 # 0.0.8
 
 * Nothing would happen if the selection was led with an ignored special character.

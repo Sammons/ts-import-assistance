@@ -92,10 +92,22 @@ class TSImportAssistance {
 
     constructImportStatement(details: ImportDetails): string {
         let cleanPath = this.cleanPathToImportFrom(details.path);
+        let q1 = "'";
+        let q2 = '"';
+        let txt = vscode.window.activeTextEditor.document.getText();
+        let q1Count = 0;
+        let q2Count = 0;
+        txt.split(new RegExp(newLine, 'igm'))
+            .filter(l => l.includes('from'))
+            .forEach(l => {
+                if (l.includes(q1)) q1Count++;
+                if (l.includes(q2)) q2Count++;
+            });
+        let q = q1Count >= q2Count ? q1 : q2;
         if (nodeLibs.find(s => s === cleanPath) || cleanPath === details.symbolToImport) {
-            return `import * as ${details.symbolToImport} from '${cleanPath}';${newLine}`;
+            return `import * as ${details.symbolToImport} from ${q}${cleanPath}${q};${newLine}`;
         } else {
-            return `import {${details.symbolToImport}} from '${cleanPath}';${newLine}`;
+            return `import {${details.symbolToImport}} from ${q}${cleanPath}${q};${newLine}`;
         }
     }
 
@@ -122,7 +134,7 @@ class TSImportAssistance {
 
     getSymbolsFromNonEmptySelections(): string[] {
         if (vscode.window.activeTextEditor.selections.length > 0) {
-            
+
             // get all selections
             return vscode.window.activeTextEditor.selections.filter(s => !s.isEmpty).map(s => {
                 // get their text
@@ -289,7 +301,7 @@ class TSImportAssistance {
         } catch (e) {
             console.log(e);
             return;
-        }    
+        }
     }
 }
 
