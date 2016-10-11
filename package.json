@@ -23,10 +23,25 @@
     ],
     "main": "./out/src/extension",
     "contributes": {
-        "commands": [{
-            "command": "extension.resolveMissingImportsForHighlighted",
-            "title": "Resolve and import symbol"
-        }]
+        "commands": [
+            {
+                "command": "extension.resolveMissingImportsForHighlighted",
+                "title": "Resolve and import symbol"
+            }
+        ],
+        "contributes": {
+            "configuration": {
+                "type": "object",
+                "title": "TS Import Assistance Configuration",
+                "properties": {
+                    "tsia.addSpacesAroundBracketedImport": {
+                        "type": "boolean",
+                        "default": "false",
+                        "description": "Adds space between brackets and imported class name"
+                    }
+                }
+            }
+        }
     },
     "scripts": {
         "vscode:prepublish": "node ./node_modules/vscode/bin/compile",

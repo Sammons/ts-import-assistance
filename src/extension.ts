@@ -11,9 +11,7 @@ const nodeLibs =
         'string_decoder', 'http', 'https', 'cluster', 'assert', 'dgram', 'url', 'vm', 'zlib', 'dns'];
 const newLine = '\n';//TODO: would it actually be better to be platform specific? I'm not convinced.
 const tsImportAssistanceCommandName = 'extension.resolveMissingImportsForHighlighted';
-
 type ImportDetails = { symbolToImport: string; path: string; symbolInfo: vscode.SymbolInformation };
-
 class TSImportAssistance {
     activeFile = vscode.window.activeTextEditor.document.fileName;
     activeDir = path.parse(this.activeFile).dir;
@@ -107,7 +105,14 @@ class TSImportAssistance {
         if (nodeLibs.find(s => s === cleanPath) || cleanPath === details.symbolToImport) {
             return `import * as ${details.symbolToImport} from ${q}${cleanPath}${q};${newLine}`;
         } else {
-            return `import {${details.symbolToImport}} from ${q}${cleanPath}${q};${newLine}`;
+            let spacesOn =
+                (vscode.workspace.getConfiguration('tsia').has('addSpacesAroundBracketedImport')) &&
+                (vscode.workspace.getConfiguration('tsia').get<boolean>('addSpacesAroundBracketedImport') === true);
+            if (spacesOn) {
+                return `import { ${details.symbolToImport} } from ${q}${cleanPath}${q};${newLine}`;
+            } else {
+                return `import {${details.symbolToImport}} from ${q}${cleanPath}${q};${newLine}`;
+            }    
         }
     }
 

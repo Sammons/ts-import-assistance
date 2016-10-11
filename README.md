@@ -24,6 +24,13 @@ Source [here](https://github.com/Sammons/ts-import-assistance)
 
 This software is utterly free and open, and the authors are not responsible for any consequences of its existence (MIT license).
 
+# 0.0.10
+
+* Add configuration for setting spaces in import statements like `{ ImportedClass }` instead of just `{ImportedClass}`.
+in your settings.json file, set
+
+    "tsia.addSpacesAroundBracketedImport": true
+
 # 0.0.9
 
 * Auto detect which type of quote to use
