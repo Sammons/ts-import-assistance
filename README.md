@@ -1,3 +1,5 @@
+*I am stopping development on this project in leu of https://marketplace.visualstudio.com/items?itemName=rbbit.typescript-hero which has much more focused development behind it. I will continue to monitor this repo for new issues or questions. I published this tool originally as a patchwork solution for my own needs at work until better solutions arose in the marketplace. I feel that those solutions are here now - an issue I followed around this topic on vscode was https://github.com/Microsoft/TypeScript/issues/188 for anyone interested in how the conversation went over time.*
+
 TypeScript assistance with writing imports. Written with node.js development in mind.
 
 cmd + shift + p, then type "Resolve and import symbol". This normally autocompletes just typing "res".
